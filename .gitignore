@@ -1,0 +1,10 @@
+/Makefile
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/*.cmake-trigger
+*.rlib
+*.dylib
+*.dSYM
+*.so
+*.dll
