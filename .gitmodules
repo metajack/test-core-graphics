@@ -1,0 +1,6 @@
+[submodule "deps/rust-core-foundation"]
+	path = deps/rust-core-foundation
+	url = https://github.com/metajack/rust-core-foundation
+[submodule "deps/rust-core-graphics"]
+	path = deps/rust-core-graphics
+	url = https://github.com/metajack/rust-core-graphics
