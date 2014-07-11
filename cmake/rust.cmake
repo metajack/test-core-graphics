@@ -11,13 +11,10 @@ function(ensure_project_target)
 endfunction()
 
 function(rust_target libfile type)
-  message("rust_target(${libfile} ${type})")
   set(libfile_abs ${CMAKE_CURRENT_SOURCE_DIR}/${libfile})
-  message("input file: ${libfile_abs}")
   execute_process(COMMAND ${RUSTC} --crate-name ${libfile_abs}
                   OUTPUT_VARIABLE crate_name
                   OUTPUT_STRIP_TRAILING_WHITESPACE)
-  message("crate name: ${crate_name}")
   if(${type} STREQUAL "lib")
     execute_process(
       COMMAND ${RUSTC} --crate-file-name ${libfile_abs}
@@ -27,7 +24,6 @@ function(rust_target libfile type)
       COMMAND ${RUSTC} --crate-type bin --crate-file-name ${libfile_abs}
       OUTPUT_VARIABLE crate_filenames)
   endif()
-  message("crate filenames: ${crate_filenames}")
   string(REPLACE ${CMAKE_CURRENT_SOURCE_DIR}/ ${CMAKE_CURRENT_BINARY_DIR}/ libfile_out ${libfile_abs})
   execute_process(COMMAND ${RUSTC} --no-analysis --dep-info ${libfile_out}.depinfo ${libfile_abs}
                   OUTPUT_QUIET ERROR_QUIET)
@@ -45,10 +41,10 @@ function(rust_target libfile type)
   configure_file(${libfile_abs} ${libfile_out_dir}/.${libfile_out_name}.cmake-trigger)
 
   if("${type}" STREQUAL "test")
+    separate_arguments(RUSTFLAGS)
     add_custom_command(
       OUTPUT ${crate_name}-test
-      COMMAND ${RUSTC}
-      ARGS ${RUSTFLAGS} --test -o ${crate_name}-test ${libfile_abs}
+      COMMAND ${RUSTC} ${RUSTFLAGS} --test -o ${crate_name}-test ${libfile_abs}
       DEPENDS ${dep_files})
     if(NOT TARGET check-${crate_name})
       add_custom_target(
@@ -61,16 +57,15 @@ function(rust_target libfile type)
     endif()
     add_dependencies(check check-${crate_name})
   else()
-    string(TOUPPER ${crate_name} upper_crate_name)
-    message("set ${upper_crate_name}_LIBRARY to ${CMAKE_CURRENT_BINARY_DIR}")
-    set_property(GLOBAL PROPERTY ${upper_crate_name}_LIBRARY ${CMAKE_CURRENT_BINARY_DIR})
+    string(TOUPPER ${PROJECT_NAME} upper_project_name)
+    string(REPLACE "-" "_" prop_name ${upper_project_name})
+    set_property(GLOBAL PROPERTY ${prop_name}_LIBRARY ${CMAKE_CURRENT_BINARY_DIR})
+    separate_arguments(RUSTFLAGS)
     add_custom_command(
       OUTPUT ${lib_outputs}
-      COMMAND echo ${RUSTC} ${RUSTFLAGS} ${libfile_abs}
       COMMAND ${RUSTC} ${RUSTFLAGS} ${libfile_abs}
       DEPENDS ${dep_files})
     ensure_project_target()
-    message("prj-${PROJECT_NAME} adding target ${crate_name}_${type}")
     add_custom_target(${crate_name}_${type} DEPENDS ${lib_outputs})
     add_dependencies("prj-${PROJECT_NAME}" ${crate_name}_${type})
   endif()
@@ -90,9 +85,9 @@ endfunction(rust_test)
 
 function(add_rust_dependencies name)
   ensure_project_target()
-  add_dependencies("prj-${PROJECT_NAME}" ${name})
+  add_dependencies("prj-${PROJECT_NAME}" prj-${name})
   string(TOUPPER ${name} name_upper)
-  get_property(lib_dir GLOBAL PROPERTY ${name_upper}_LIBRARY)
-  message("${PROJECT_NAME} adding -L ${lib_dir} to rustflags")
+  string(REPLACE "-" "_" prop_name ${name_upper})
+  get_property(lib_dir GLOBAL PROPERTY ${prop_name}_LIBRARY)
   set(RUSTFLAGS "${RUSTFLAGS} -L ${lib_dir}" PARENT_SCOPE)
 endfunction(add_rust_dependencies)
